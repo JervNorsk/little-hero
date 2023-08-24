@@ -1,0 +1,67 @@
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: The name of the environment where it will be deployed
+        type: string
+        default: itch
+
+      from-repository:
+        description: The repository from which the workspace will be cloned
+        type: string
+      from-repository-ref:
+        description: The reference of the repository to which the workspace will be aligned
+        type: string
+      from-artifact:
+        description: The artifact that will be downloaded from the workspace
+        type: string
+
+      itch-api-token-key:
+        description: The itch butler's API token key (from secrets)
+        type: string
+        default: ITCH_API_TOKEN
+      itch-username-key:
+        description: The itch username key (from vars)
+        type: string
+        default: ITCH_USERNAME
+      itch-game-id-key:
+        description: The itch game ID key (from vars)
+        type: string
+        default: ITCH_GAME_ID
+      itch-build-src:
+        description: The itch build source file or folder to upload
+        type: string
+        default: ./
+      itch-build-channel:
+        description: The itch build channel name
+        type: string
+        required: true
+      itch-build-version:
+        description: The itch build version
+        type: string
+
+jobs:
+  execute:
+    name: Itch
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://${{ vars[inputs.itch-username-key] }}.itch.io/${{ vars[inputs.itch-game-id-key] }}
+    steps:
+      - if: ${{ inputs.from-repository || inputs.from-repository-ref }}
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.from-repository }}
+          ref: ${{ inputs.from-repository-ref }}
+      - if: ${{ inputs.from-artifact }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.from-artifact }}
+      - uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{ secrets[inputs.itch-api-token-key] }}
+          itchUsername: ${{ vars[inputs.itch-username-key] }}
+          itchGameId: ${{ vars[inputs.itch-game-id-key] }}
+          gameData: ${{ inputs.itch-build-src }}
+          buildChannel: ${{ inputs.itch-build-channel }}
+          buildNumber: ${{ inputs.itch-build-version }}
